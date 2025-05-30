@@ -181,9 +181,12 @@ const inquirer = require('inquirer');
         console.warn('⚠️  Failed to remove some dependencies. You may ignore if not present.');
       }
       try {
-        const installCmd = answers.packageManager === 'yarn'
-          ? `yarn add -D ${deps.join(' ')}`
-          : `npm install -D ${deps.join(' ')}`;
+        let installCmd = '';
+        if (answers.packageManager === 'yarn') {
+          installCmd = `yarn add -D ${deps.join(' ')} --ignore-engines`;
+        } else {
+          installCmd = `npm install -D ${deps.join(' ')} --legacy-peer-deps`;
+        }
         require('child_process').execSync(installCmd, { stdio: 'inherit' });
         console.log('✅ Dependencies installed!');
       } catch (e) {
