@@ -107,8 +107,6 @@ const inquirer = require('inquirer');
         reactHooksPluginVer = 'eslint-plugin-react-hooks@2';
         tsParserVer = '@typescript-eslint/parser@2';
         tsPluginVer = '@typescript-eslint/eslint-plugin@2';
-        // eslint 也锁定 6.x
-        baseDeps[0] = 'eslint@6';
       } else if (eslintVersion && /^6\./.test(eslintVersion)) {
         prettierConfigVer = 'eslint-config-prettier@6';
         prettierPluginVer = 'eslint-plugin-prettier@3';
@@ -123,8 +121,9 @@ const inquirer = require('inquirer');
         tsParserVer = '@typescript-eslint/parser@4';
         tsPluginVer = '@typescript-eslint/eslint-plugin@4';
       }
-      // Node 12 环境下，部分高版本依赖也不兼容
+      // Node 12 环境下，所有依赖锁定兼容版本
       if (nodeMajor < 14) {
+        prettierVer = 'prettier@2';
         prettierConfigVer = 'eslint-config-prettier@6';
         prettierPluginVer = 'eslint-plugin-prettier@3';
         reactPluginVer = 'eslint-plugin-react@7';
@@ -134,7 +133,7 @@ const inquirer = require('inquirer');
       }
 
       const baseDeps = [
-        'eslint',
+        nodeMajor < 14 ? 'eslint@6' : 'eslint',
         prettierVer,
         prettierConfigVer,
         prettierPluginVer
