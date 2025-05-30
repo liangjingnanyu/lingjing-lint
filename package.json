@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "A tool to generate and configure lint and Prettier rules for React (and TypeScript) projects.",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liangjingnanyu/lingjing-lint"
+   },
   "bin": {
     "liangjing-lint-start": "index.js"
   },
