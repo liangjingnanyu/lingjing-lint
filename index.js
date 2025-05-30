@@ -126,8 +126,60 @@ inquirer
     ];
     const deps = baseDeps.concat(reactDeps, answers.isTsProject ? tsDeps : []);
     console.log('\n📦 Installing dependencies...');
+    // 删除用户本地 node_modules
+    const fsExtra = require('fs-extra');
+    const nodeModulesPath = path.join(process.cwd(), 'node_modules');
+    if (fsExtra.existsSync(nodeModulesPath)) {
+      try {
+        console.log('\n🧹 Removing node_modules...');
+        fsExtra.removeSync(nodeModulesPath);
+        console.log('✅ node_modules removed!');
+      } catch (e) {
+        console.warn('⚠️  Failed to remove node_modules. Please remove it manually if needed.');
+      }
+    }
+
+    // 让用户选择使用 yarn 还是 npm
+    let packageManager = 'npm';
+    if (fsExtra.existsSync(path.join(process.cwd(), 'yarn.lock'))) {
+      packageManager = 'yarn';
+    } else {
+      const inquirer = require('inquirer');
+      const pmAnswer = inquirer.prompt([
+        {
+          type: 'list',
+          name: 'pm',
+          message: '请选择包管理器（Choose your package manager）:',
+          choices: ['npm', 'yarn'],
+          default: 'npm',
+        },
+      ]);
+      packageManager = (pmAnswer && pmAnswer.pm) || 'npm';
+    }
+
+    // 删除用户原有相关依赖
+    const removeDeps = [
+      'eslint',
+      'prettier',
+      'eslint-config-prettier',
+      'eslint-plugin-prettier',
+      'eslint-plugin-react',
+      'eslint-plugin-react-hooks',
+      '@typescript-eslint/parser',
+      '@typescript-eslint/eslint-plugin'
+    ];
     try {
-      require('child_process').execSync('npm install -D ' + deps.join(' '), { stdio: 'inherit' });
+      console.log('\n🧹 Removing old lint dependencies...');
+      require('child_process').execSync(`${packageManager} remove ` + removeDeps.join(' '), { stdio: 'inherit' });
+      console.log('✅ Old dependencies removed!');
+    } catch (e) {
+      console.warn('⚠️  Failed to remove some dependencies. You may ignore if not present.');
+    }
+    try {
+      const installCmd = packageManager === 'yarn'
+        ? `yarn add -D ${deps.join(' ')}`
+        : `npm install -D ${deps.join(' ')}`;
+      require('child_process').execSync(installCmd, { stdio: 'inherit' });
       console.log('✅ Dependencies installed!');
     } catch (e) {
       console.error('❌ Failed to install dependencies. Please install them manually:', deps.join(' '));
