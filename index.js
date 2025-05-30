@@ -91,6 +91,7 @@ const inquirer = require('inquirer');
       }
 
       // 根据 eslint 版本和 node 版本选择依赖
+      let prettierVer = 'prettier';
       let prettierConfigVer = 'eslint-config-prettier';
       let prettierPluginVer = 'eslint-plugin-prettier';
       let reactPluginVer = 'eslint-plugin-react';
@@ -98,7 +99,17 @@ const inquirer = require('inquirer');
       let tsParserVer = '@typescript-eslint/parser';
       let tsPluginVer = '@typescript-eslint/eslint-plugin';
 
-      if (eslintVersion && /^6\./.test(eslintVersion)) {
+      if (nodeMajor < 14) {
+        prettierVer = 'prettier@2';
+        prettierConfigVer = 'eslint-config-prettier@6';
+        prettierPluginVer = 'eslint-plugin-prettier@3';
+        reactPluginVer = 'eslint-plugin-react@7';
+        reactHooksPluginVer = 'eslint-plugin-react-hooks@2';
+        tsParserVer = '@typescript-eslint/parser@2';
+        tsPluginVer = '@typescript-eslint/eslint-plugin@2';
+        // eslint 也锁定 6.x
+        baseDeps[0] = 'eslint@6';
+      } else if (eslintVersion && /^6\./.test(eslintVersion)) {
         prettierConfigVer = 'eslint-config-prettier@6';
         prettierPluginVer = 'eslint-plugin-prettier@3';
         reactPluginVer = 'eslint-plugin-react@7';
@@ -114,7 +125,6 @@ const inquirer = require('inquirer');
       }
       // Node 12 环境下，部分高版本依赖也不兼容
       if (nodeMajor < 14) {
-        // 强制使用低版本依赖
         prettierConfigVer = 'eslint-config-prettier@6';
         prettierPluginVer = 'eslint-plugin-prettier@3';
         reactPluginVer = 'eslint-plugin-react@7';
@@ -125,7 +135,7 @@ const inquirer = require('inquirer');
 
       const baseDeps = [
         'eslint',
-        'prettier',
+        prettierVer,
         prettierConfigVer,
         prettierPluginVer
       ];
@@ -210,13 +220,17 @@ const inquirer = require('inquirer');
         console.warn('⚠️  package.json not found. Please add lint/format scripts manually.');
       }
 
-      // 自动执行格式化
-      try {
-        console.log('\n✨ Running code format...');
-        require('child_process').execSync('npm run format', { stdio: 'inherit' });
-        console.log('✅ Code formatted!');
-      } catch (e) {
-        console.warn('⚠️  Failed to auto format code. Please run "npm run format" manually.');
+      // 自动执行格式化（仅 Node 14 及以上才尝试自动执行）
+      if (nodeMajor >= 14) {
+        try {
+          console.log('\n✨ Running code format...');
+          require('child_process').execSync('npm run format', { stdio: 'inherit' });
+          console.log('✅ Code formatted!');
+        } catch (e) {
+          console.warn('⚠️  Failed to auto format code. Please run "npm run format" manually.');
+        }
+      } else {
+        console.warn('⚠️  当前 Node 版本过低（<14），请手动运行 npm run format 进行格式化。');
       }
 
       console.log('\n🎉 Configuration files generated successfully!');
