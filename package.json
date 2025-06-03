@@ -1,6 +1,6 @@
 {
   "name": "liangjing-lint-start",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "A tool to generate and configure lint and Prettier rules for React (and TypeScript) projects.",
   "main": "index.js",
   "repository": {
