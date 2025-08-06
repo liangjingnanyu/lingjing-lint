@@ -4,15 +4,39 @@ const fs = require("fs-extra");
 const path = require("path");
 const child_process = require("child_process");
 
-// inquirer 已由主入口安装，直接使用
+// 检查并安装 inquirer
 let inquirer;
-try {
-  inquirer = require("inquirer");
-} catch (e) {
-  console.error("❌ inquirer 未找到，请确保通过主入口 (index-smart.js) 启动");
-  console.error("   或手动安装: npm install inquirer");
-  process.exit(1);
-}
+(function ensureInquirer() {
+  function getNodeMajorVersion() {
+    const version = process.version;
+    const match = version.match(/v(\d+)/);
+    return match ? parseInt(match[1], 10) : 14;
+  }
+  const nodeMajor = getNodeMajorVersion();
+  let inquirerVersion = nodeMajor < 14 ? "8" : "9";
+  try {
+    inquirer = require("inquirer");
+  } catch (e) {
+    console.log(`\n📦 正在安装兼容的 inquirer 版本: inquirer@${inquirerVersion} ...`);
+    try {
+      if (require("fs").existsSync("yarn.lock")) {
+        require("child_process").execSync(
+          `yarn add inquirer@${inquirerVersion} --dev --ignore-scripts --ignore-engines --no-lockfile --silent`,
+          { stdio: "inherit" }
+        );
+      } else {
+        require("child_process").execSync(
+          `npm install inquirer@${inquirerVersion} --no-save --ignore-scripts --legacy-peer-deps --silent`,
+          { stdio: "inherit" }
+        );
+      }
+      inquirer = require("inquirer");
+    } catch (e2) {
+      console.error("❌ inquirer 安装失败，请手动安装: npm install inquirer");
+      process.exit(1);
+    }
+  }
+})();
 
 // 导入配置预设
 let presets;

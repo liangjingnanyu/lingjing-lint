@@ -64,15 +64,6 @@ function getUserInput(prompt, defaultValue) {
     });
 }
 
-// 显示版本选择菜单
-function showVersionMenu() {
-  console.log("\n🚀 欢迎使用 liangjing-lint-start 配置工具！");
-  console.log("\n请选择要使用的版本：");
-  console.log("  1. 🔥 增强版 - 智能检测、多预设、VSCode集成（推荐）");
-  console.log("  2. 📦 原版 - 经典版本，稳定可靠");
-  console.log("  3. ❓ 查看版本对比");
-}
-
 // 显示版本对比信息
 function showVersionComparison() {
   console.log("\n📊 版本功能对比：");

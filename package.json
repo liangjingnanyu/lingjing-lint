@@ -1,6 +1,6 @@
 {
   "name": "liangjing-lint-start",
-  "version": "2.0.5",
+  "version": "2.0.7",
   "description": "增强版 React/TypeScript 项目 lint 和 prettier 配置工具 - 支持智能检测、多框架、配置预设",
   "main": "index-smart.js",
   "repository": {
