@@ -4,6 +4,16 @@ const fs = require("fs-extra");
 const path = require("path");
 const child_process = require("child_process");
 
+// inquirer 已由主入口安装，直接使用
+let inquirer;
+try {
+  inquirer = require("inquirer");
+} catch (e) {
+  console.error("❌ inquirer 未找到，请确保通过主入口 (index-smart.js) 启动");
+  console.error("   或手动安装: npm install inquirer");
+  process.exit(1);
+}
+
 // 导入配置预设
 let presets;
 try {
@@ -14,31 +24,34 @@ try {
     standard: {
       eslint: {
         extends: [
-          'eslint:recommended',
-          '@typescript-eslint/recommended',
-          'plugin:react/recommended',
-          'plugin:react-hooks/recommended',
-          'prettier',
+          "eslint:recommended",
+          "@typescript-eslint/recommended",
+          "plugin:react/recommended",
+          "plugin:react-hooks/recommended",
+          "prettier",
         ],
         rules: {
-          '@typescript-eslint/no-explicit-any': 'warn',
-          '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-          'react/prop-types': 'off',
-          'no-console': 'warn',
-        }
+          "@typescript-eslint/no-explicit-any": "warn",
+          "@typescript-eslint/no-unused-vars": [
+            "error",
+            { argsIgnorePattern: "^_" },
+          ],
+          "react/prop-types": "off",
+          "no-console": "warn",
+        },
       },
       prettier: {
         printWidth: 80,
         tabWidth: 2,
         semi: true,
         singleQuote: true,
-        trailingComma: 'es5',
-      }
+        trailingComma: "es5",
+      },
     },
     strict: { eslint: {}, prettier: {} },
     relaxed: { eslint: {}, prettier: {} },
     team: { eslint: {}, prettier: {} },
-    frameworks: {}
+    frameworks: {},
   };
 }
 
@@ -48,7 +61,7 @@ const CONFIG = {
   REGISTRY_URL: "https://registry.npmjs.org/",
   DEPENDENCIES_TO_REMOVE: [
     "eslint",
-    "prettier", 
+    "prettier",
     "eslint-config-prettier",
     "eslint-plugin-prettier",
     "eslint-plugin-react",
@@ -60,8 +73,8 @@ const CONFIG = {
     typescript: "enhanced-ts-eslint.js",
     javascript: "eslint.js",
     prettier: "enhanced-prettier.js",
-    tslint: "tslint.json"
-  }
+    tslint: "tslint.json",
+  },
 };
 
 // 工具函数类
@@ -73,46 +86,50 @@ class Utils {
   }
 
   static async getUserInput(prompt, defaultValue = "") {
-    process.stdout.write(`${prompt}${defaultValue ? ` (默认: ${defaultValue})` : ""}: `);
-    process.stdin.setEncoding("utf8");
-    
-    return new Promise((resolve) => {
-      process.stdin.once("data", (data) => {
-        const input = data.trim();
-        resolve(input || defaultValue);
-      });
-    });
+    if (!inquirer) inquirer = require("inquirer");
+    const res = await inquirer.prompt([
+      {
+        type: "input",
+        name: "result",
+        message: prompt,
+        default: defaultValue,
+      },
+    ]);
+    return res.result;
   }
 
   static async getChoice(prompt, choices, defaultChoice = 0) {
-    console.log(`\n${prompt}`);
-    choices.forEach((choice, index) => {
-      const marker = index === defaultChoice ? "●" : "○";
-      console.log(`  ${marker} ${index + 1}. ${choice.name} - ${choice.description}`);
-    });
-    
-    const input = await this.getUserInput(`请选择 (1-${choices.length})`, (defaultChoice + 1).toString());
-    const choiceIndex = parseInt(input) - 1;
-    
-    if (choiceIndex >= 0 && choiceIndex < choices.length) {
-      return choices[choiceIndex];
-    }
-    
-    return choices[defaultChoice];
+    if (!inquirer) inquirer = require("inquirer");
+    const res = await inquirer.prompt([
+      {
+        type: "list",
+        name: "result",
+        message: prompt,
+        choices: choices.map((c) => ({
+          name: `${c.name} - ${c.description}`,
+          value: c,
+        })),
+        default: defaultChoice,
+      },
+    ]);
+    return res.result;
   }
 
   static detectProjectType() {
     const cwd = process.cwd();
     const packageJsonPath = path.join(cwd, "package.json");
-    
+
     let detectedFramework = "react";
     let detectedLanguage = "javascript";
-    
+
     if (fs.existsSync(packageJsonPath)) {
       try {
         const packageJson = fs.readJsonSync(packageJsonPath);
-        const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
-        
+        const deps = {
+          ...packageJson.dependencies,
+          ...packageJson.devDependencies,
+        };
+
         // 检测框架
         if (deps["next"] || deps["@next/core"]) {
           detectedFramework = "nextjs";
@@ -121,16 +138,20 @@ class Utils {
         } else if (deps["vite"]) {
           detectedFramework = "vite";
         }
-        
+
         // 检测语言
-        if (deps.typescript || deps["@types/node"] || fs.existsSync(path.join(cwd, "tsconfig.json"))) {
+        if (
+          deps.typescript ||
+          deps["@types/node"] ||
+          fs.existsSync(path.join(cwd, "tsconfig.json"))
+        ) {
           detectedLanguage = "typescript";
         }
       } catch (e) {
         console.warn("⚠️ 无法读取 package.json，将使用默认配置");
       }
     }
-    
+
     // 检测 TypeScript 文件
     if (detectedLanguage === "javascript") {
       const srcDirs = ["src", "lib", "app", "pages"];
@@ -138,26 +159,32 @@ class Utils {
         const dirPath = path.join(cwd, dir);
         if (fs.existsSync(dirPath)) {
           const files = fs.readdirSync(dirPath);
-          if (files.some(file => file.endsWith(".ts") || file.endsWith(".tsx"))) {
+          if (
+            files.some((file) => file.endsWith(".ts") || file.endsWith(".tsx"))
+          ) {
             detectedLanguage = "typescript";
             break;
           }
         }
       }
     }
-    
+
     return { framework: detectedFramework, language: detectedLanguage };
   }
 
   static async execCommand(command, options = {}) {
     return new Promise((resolve, reject) => {
-      child_process.exec(command, { stdio: "inherit", ...options }, (error, stdout, stderr) => {
-        if (error) {
-          reject({ error, stdout, stderr });
-        } else {
-          resolve({ stdout, stderr });
+      child_process.exec(
+        command,
+        { stdio: "inherit", ...options },
+        (error, stdout, stderr) => {
+          if (error) {
+            reject({ error, stdout, stderr });
+          } else {
+            resolve({ stdout, stderr });
+          }
         }
-      });
+      );
     });
   }
 }
@@ -177,7 +204,9 @@ class ProgressManager {
     this.currentStep++;
     const progress = Math.round((this.currentStep / this.steps.length) * 100);
     const progressBar = this.createProgressBar(progress);
-    console.log(`\n[${this.currentStep}/${this.steps.length}] ${progressBar} ${message}`);
+    console.log(
+      `\n[${this.currentStep}/${this.steps.length}] ${progressBar} ${message}`
+    );
   }
 
   createProgressBar(progress) {
@@ -200,15 +229,15 @@ class PackageManager {
 
   detectPackageManager() {
     const cwd = process.cwd();
-    
+
     if (fs.existsSync(path.join(cwd, "yarn.lock"))) {
       return "yarn";
     }
-    
+
     if (fs.existsSync(path.join(cwd, "pnpm-lock.yaml"))) {
       return "pnpm";
     }
-    
+
     return "npm";
   }
 
@@ -235,10 +264,12 @@ class PackageManager {
 
   async installDependencies(deps, isDev = true) {
     const devFlag = isDev ? this.getDevFlag() : "";
-    const command = `${this.manager} ${this.getInstallCommand()} ${deps.join(" ")} ${devFlag}`;
-    
+    const command = `${this.manager} ${this.getInstallCommand()} ${deps.join(
+      " "
+    )} ${devFlag}`;
+
     console.log(`📦 正在安装依赖: ${deps.join(", ")}`);
-    
+
     try {
       await Utils.execCommand(command);
       return true;
@@ -264,7 +295,7 @@ class PackageManager {
 
   async removeDependencies(deps) {
     const command = `${this.manager} remove ${deps.join(" ")}`;
-    
+
     try {
       await Utils.execCommand(command);
       console.log("✅ 旧依赖已移除");
@@ -275,21 +306,24 @@ class PackageManager {
 
   async addScripts() {
     const packageJsonPath = path.join(process.cwd(), "package.json");
-    
+
     if (fs.existsSync(packageJsonPath)) {
       try {
         const packageJson = fs.readJsonSync(packageJsonPath);
-        
+
         if (!packageJson.scripts) {
           packageJson.scripts = {};
         }
-        
+
         // 添加 lint 和 format 脚本
         packageJson.scripts.lint = "eslint . --ext .js,.jsx,.ts,.tsx";
-        packageJson.scripts["lint:fix"] = "eslint . --ext .js,.jsx,.ts,.tsx --fix";
-        packageJson.scripts.format = "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"";
-        packageJson.scripts["format:check"] = "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"";
-        
+        packageJson.scripts["lint:fix"] =
+          "eslint . --ext .js,.jsx,.ts,.tsx --fix";
+        packageJson.scripts.format =
+          'prettier --write "**/*.{js,jsx,ts,tsx,json,css,md}"';
+        packageJson.scripts["format:check"] =
+          'prettier --check "**/*.{js,jsx,ts,tsx,json,css,md}"';
+
         fs.writeJsonSync(packageJsonPath, packageJson, { spaces: 2 });
         console.log("✅ 已添加 lint 和 format 脚本到 package.json");
       } catch (e) {
@@ -308,47 +342,53 @@ class ConfigGenerator {
   async generateConfigs(options) {
     const { projectType, preset, framework, includeTslint = false } = options;
     const configs = [];
-    
+
     // 根据预设生成配置
     const presetConfig = presets[preset] || presets.standard;
-    
+
     // 生成 ESLint 配置
     await this.generateEslintConfig(projectType, presetConfig, framework);
     configs.push(".eslintrc.js");
-    
+
     // 生成 TSLint 配置（如果需要）
     if (includeTslint && projectType === "typescript") {
       await this.generateTslintConfig();
       configs.push("tslint.json");
     }
-    
+
     // 生成 Prettier 配置
     await this.generatePrettierConfig(presetConfig);
     configs.push(".prettierrc.js");
-    
+
     // 生成忽略文件
     await this.generateIgnoreFiles();
     configs.push(".eslintignore", ".prettierignore");
-    
+
     // 生成 VSCode 配置
     await this.generateVSCodeConfig();
     configs.push(".vscode/settings.json");
-    
+
     return configs;
   }
 
   async generateEslintConfig(projectType, presetConfig, framework) {
     let config = { ...presetConfig.eslint };
-    
+
     // 添加框架特定配置
     if (framework && presets.frameworks[framework]) {
       const frameworkConfig = presets.frameworks[framework];
-      config.extends = [...(config.extends || []), ...(frameworkConfig.extends || [])];
+      config.extends = [
+        ...(config.extends || []),
+        ...(frameworkConfig.extends || []),
+      ];
       config.rules = { ...config.rules, ...frameworkConfig.rules };
       config.env = { ...config.env, ...frameworkConfig.env };
-      config.plugins = [...(config.plugins || []), ...(frameworkConfig.plugins || [])];
+      config.plugins = [
+        ...(config.plugins || []),
+        ...(frameworkConfig.plugins || []),
+      ];
     }
-    
+
     // TypeScript 特定配置
     if (projectType === "typescript") {
       config.parser = "@typescript-eslint/parser";
@@ -359,10 +399,14 @@ class ConfigGenerator {
         sourceType: "module",
       };
     }
-    
-    const configContent = `module.exports = ${JSON.stringify(config, null, 2)};`;
+
+    const configContent = `module.exports = ${JSON.stringify(
+      config,
+      null,
+      2
+    )};`;
     const dest = path.join(process.cwd(), ".eslintrc.js");
-    
+
     fs.writeFileSync(dest, configContent);
     console.log("✅ 已生成 .eslintrc.js 配置文件");
   }
@@ -370,22 +414,28 @@ class ConfigGenerator {
   async generateTslintConfig() {
     const source = path.join(this.templateDir, CONFIG.TEMPLATES.tslint);
     const dest = path.join(process.cwd(), "tslint.json");
-    
+
     if (!fs.existsSync(source)) {
       console.warn("⚠️ TSLint 模板文件不存在，跳过生成");
       return;
     }
-    
+
     fs.copySync(source, dest);
     console.log("✅ 已生成 tslint.json 配置文件");
-    console.log("⚠️ 注意：TSLint 已被官方弃用，建议使用 ESLint + @typescript-eslint");
+    console.log(
+      "⚠️ 注意：TSLint 已被官方弃用，建议使用 ESLint + @typescript-eslint"
+    );
   }
 
   async generatePrettierConfig(presetConfig) {
     const config = presetConfig.prettier;
-    const configContent = `module.exports = ${JSON.stringify(config, null, 2)};`;
+    const configContent = `module.exports = ${JSON.stringify(
+      config,
+      null,
+      2
+    )};`;
     const dest = path.join(process.cwd(), ".prettierrc.js");
-    
+
     fs.writeFileSync(dest, configContent);
     console.log("✅ 已生成 .prettierrc.js 配置文件");
   }
@@ -403,10 +453,13 @@ class ConfigGenerator {
       "out/",
       "public/",
     ].join("\n");
-    
-    fs.writeFileSync(path.join(process.cwd(), ".eslintignore"), eslintIgnoreContent);
+
+    fs.writeFileSync(
+      path.join(process.cwd(), ".eslintignore"),
+      eslintIgnoreContent
+    );
     console.log("✅ 已生成 .eslintignore 文件");
-    
+
     // .prettierignore
     const prettierIgnoreContent = [
       "node_modules/",
@@ -421,32 +474,35 @@ class ConfigGenerator {
       ".next/",
       "out/",
     ].join("\n");
-    
-    fs.writeFileSync(path.join(process.cwd(), ".prettierignore"), prettierIgnoreContent);
+
+    fs.writeFileSync(
+      path.join(process.cwd(), ".prettierignore"),
+      prettierIgnoreContent
+    );
     console.log("✅ 已生成 .prettierignore 文件");
   }
 
   async generateVSCodeConfig() {
     const vscodeDir = path.join(process.cwd(), ".vscode");
     const settingsPath = path.join(vscodeDir, "settings.json");
-    
+
     fs.ensureDirSync(vscodeDir);
-    
+
     const settings = {
       "editor.defaultFormatter": "esbenp.prettier-vscode",
       "editor.formatOnSave": true,
       "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true
+        "source.fixAll.eslint": true,
       },
       "eslint.validate": [
         "javascript",
         "javascriptreact",
         "typescript",
-        "typescriptreact"
+        "typescriptreact",
       ],
-      "typescript.preferences.importModuleSpecifier": "relative"
+      "typescript.preferences.importModuleSpecifier": "relative",
     };
-    
+
     fs.writeJsonSync(settingsPath, settings, { spaces: 2 });
     console.log("✅ 已生成 VSCode 配置文件");
   }
@@ -460,7 +516,9 @@ async function main() {
   // 检查 Node 版本
   const nodeVersion = Utils.getNodeMajorVersion();
   if (nodeVersion < CONFIG.SUPPORTED_NODE_VERSION) {
-    console.warn(`⚠️ 建议使用 Node.js ${CONFIG.SUPPORTED_NODE_VERSION}+ 版本以获得最佳体验`);
+    console.warn(
+      `⚠️ 建议使用 Node.js ${CONFIG.SUPPORTED_NODE_VERSION}+ 版本以获得最佳体验`
+    );
     console.warn(`当前版本: ${process.version}\n`);
   }
 
@@ -470,45 +528,62 @@ async function main() {
     console.log(`🔍 智能检测结果:`);
     console.log(`   框架: ${detected.framework}`);
     console.log(`   语言: ${detected.language}`);
-    
+
     // 选择配置预设
     const presetChoices = [
-      { name: "standard", description: "标准模式 - 平衡代码质量和开发效率（推荐）" },
+      {
+        name: "standard",
+        description: "标准模式 - 平衡代码质量和开发效率（推荐）",
+      },
       { name: "strict", description: "严格模式 - 最高代码质量要求" },
       { name: "relaxed", description: "宽松模式 - 适合快速开发或遗留项目" },
       { name: "team", description: "团队模式 - 适合多人协作项目" },
     ];
-    
-    const selectedPreset = await Utils.getChoice("请选择配置预设:", presetChoices, 0);
-    
+
+    const selectedPreset = await Utils.getChoice(
+      "请选择配置预设:",
+      presetChoices,
+      0
+    );
+
     // 确认项目类型
     const languageChoices = [
       { name: "typescript", description: "TypeScript 项目" },
       { name: "javascript", description: "JavaScript 项目" },
     ];
-    
+
     const defaultLanguageIndex = detected.language === "typescript" ? 0 : 1;
-    const selectedLanguage = await Utils.getChoice("确认项目语言:", languageChoices, defaultLanguageIndex);
-    
+    const selectedLanguage = await Utils.getChoice(
+      "确认项目语言:",
+      languageChoices,
+      defaultLanguageIndex
+    );
+
     // 询问是否生成 TSLint 配置（仅 TypeScript 项目）
     let includeTslint = false;
     if (selectedLanguage.name === "typescript") {
-      const tslintChoice = await Utils.getUserInput(
-        "是否同时生成 TSLint 配置？(y/N) [注意：TSLint 已被弃用，建议使用 ESLint]", 
-        "n"
-      );
-      includeTslint = tslintChoice.toLowerCase().startsWith("y");
+      if (!inquirer) inquirer = require("inquirer");
+      const tslintChoice = await inquirer.prompt([
+        {
+          type: "confirm",
+          name: "includeTslint",
+          message:
+            "是否同时生成 TSLint 配置？[注意：TSLint 已被弃用，建议使用 ESLint]",
+          default: false,
+        },
+      ]);
+      includeTslint = tslintChoice.includeTslint;
     }
-    
+
     // 初始化进度管理器
     const progress = new ProgressManager();
     progress.addSteps([
       "配置包管理器",
-      "清理旧依赖", 
+      "清理旧依赖",
       "安装新依赖",
       "生成配置文件",
       "添加脚本命令",
-      "验证配置"
+      "验证配置",
     ]);
 
     // 步骤 1: 配置包管理器
@@ -523,9 +598,15 @@ async function main() {
 
     // 步骤 3: 安装新依赖
     progress.nextStep("安装新的 lint 和 prettier 依赖...");
-    const dependencies = getDependenciesByType(selectedLanguage.name, detected.framework, includeTslint);
-    const installSuccess = await packageManager.installDependencies(dependencies);
-    
+    const dependencies = getDependenciesByType(
+      selectedLanguage.name,
+      detected.framework,
+      includeTslint
+    );
+    const installSuccess = await packageManager.installDependencies(
+      dependencies
+    );
+
     if (!installSuccess) {
       throw new Error("依赖安装失败");
     }
@@ -534,12 +615,12 @@ async function main() {
     progress.nextStep("生成配置文件...");
     const templateDir = path.join(__dirname, "templates");
     const configGenerator = new ConfigGenerator(templateDir);
-    
+
     const generatedConfigs = await configGenerator.generateConfigs({
       projectType: selectedLanguage.name,
       preset: selectedPreset.name,
       framework: detected.framework,
-      includeTslint: includeTslint
+      includeTslint: includeTslint,
     });
 
     // 步骤 5: 添加脚本命令
@@ -552,21 +633,33 @@ async function main() {
 
     // 完成
     progress.complete();
-    
+
     // 询问是否运行格式化
-    const runFormat = await Utils.getUserInput("是否立即运行代码格式化？(y/N)", "n");
-    if (runFormat.toLowerCase().startsWith("y")) {
+    if (!inquirer) inquirer = require("inquirer");
+    const formatChoice = await inquirer.prompt([
+      {
+        type: "confirm",
+        name: "runFormat",
+        message: "是否立即运行代码格式化？",
+        default: false,
+      },
+    ]);
+    if (formatChoice.runFormat) {
       console.log("\n🎨 正在格式化代码...");
       await runCodeFormat(packageManager);
     }
 
     console.log("\n🎯 配置完成！您现在可以：");
     console.log(`   • 运行 '${packageManager.manager} run lint' 检查代码`);
-    console.log(`   • 运行 '${packageManager.manager} run lint:fix' 自动修复问题`);
+    console.log(
+      `   • 运行 '${packageManager.manager} run lint:fix' 自动修复问题`
+    );
     console.log(`   • 运行 '${packageManager.manager} run format' 格式化代码`);
     console.log("   • 在 VSCode 中享受自动格式化和错误提示");
     console.log("\n💡 提示: 已为您生成 VSCode 配置，重启编辑器以生效");
 
+    // 正常完成，主动退出进程
+    process.exit(0);
   } catch (error) {
     console.error("\n❌ 配置过程中出现错误:");
     console.error(error.message);
@@ -584,7 +677,7 @@ function getDependenciesByType(projectType, framework, includeTslint = false) {
   const baseDeps = [
     "eslint",
     "prettier",
-    "eslint-config-prettier", 
+    "eslint-config-prettier",
     "eslint-plugin-prettier",
   ];
 
@@ -603,14 +696,10 @@ function getDependenciesByType(projectType, framework, includeTslint = false) {
       "@typescript-eslint/parser",
       "@typescript-eslint/eslint-plugin"
     );
-    
+
     // TSLint 相关依赖（如果需要）
     if (includeTslint) {
-      baseDeps.push(
-        "tslint",
-        "tslint-react",
-        "tslint-config-prettier"
-      );
+      baseDeps.push("tslint", "tslint-react", "tslint-config-prettier");
     }
   }
 
@@ -632,10 +721,7 @@ function getDependenciesByType(projectType, framework, includeTslint = false) {
   }
 
   // 通用增强依赖
-  baseDeps.push(
-    "eslint-plugin-import",
-    "eslint-import-resolver-typescript"
-  );
+  baseDeps.push("eslint-plugin-import", "eslint-import-resolver-typescript");
 
   return baseDeps;
 }
@@ -647,7 +733,7 @@ async function validateConfigs(configs) {
     if (!fs.existsSync(filePath)) {
       throw new Error(`配置文件生成失败: ${config}`);
     }
-    
+
     // 验证 JavaScript 配置文件语法
     if (config.endsWith(".js")) {
       try {

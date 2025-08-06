@@ -24,7 +24,7 @@ class TestRunner {
       await this.cleanup();
 
       console.log(`\n📊 测试结果: ${this.passed} 通过, ${this.failed} 失败`);
-      
+
       if (this.failed === 0) {
         console.log("🎉 所有测试通过！工具已准备就绪。");
       } else {
@@ -39,7 +39,7 @@ class TestRunner {
 
   async setupTestProject() {
     console.log("🏗️  设置测试项目...");
-    
+
     // 清理并创建测试目录
     if (fs.existsSync(this.testDir)) {
       fs.removeSync(this.testDir);
@@ -52,16 +52,18 @@ class TestRunner {
       version: "1.0.0",
       dependencies: {
         react: "^18.0.0",
-        "react-dom": "^18.0.0"
+        "react-dom": "^18.0.0",
       },
       devDependencies: {
         typescript: "^4.9.0",
-        "@types/react": "^18.0.0"
-      }
+        "@types/react": "^18.0.0",
+      },
     };
 
-    fs.writeJsonSync(path.join(this.testDir, "package.json"), packageJson, { spaces: 2 });
-    
+    fs.writeJsonSync(path.join(this.testDir, "package.json"), packageJson, {
+      spaces: 2,
+    });
+
     // 创建 tsconfig.json
     const tsConfig = {
       compilerOptions: {
@@ -77,12 +79,14 @@ class TestRunner {
         resolveJsonModule: true,
         isolatedModules: true,
         noEmit: true,
-        jsx: "react-jsx"
+        jsx: "react-jsx",
       },
-      include: ["src"]
+      include: ["src"],
     };
 
-    fs.writeJsonSync(path.join(this.testDir, "tsconfig.json"), tsConfig, { spaces: 2 });
+    fs.writeJsonSync(path.join(this.testDir, "tsconfig.json"), tsConfig, {
+      spaces: 2,
+    });
 
     // 创建源文件目录和示例文件
     fs.ensureDirSync(path.join(this.testDir, "src"));
@@ -107,7 +111,7 @@ export default App;`
 
   async testProjectDetection() {
     console.log("\n🔍 测试项目检测功能...");
-    
+
     // 导入工具类
     const originalCwd = process.cwd();
     process.chdir(this.testDir);
@@ -118,7 +122,7 @@ export default App;`
 
       this.assert(detected.language === "typescript", "TypeScript 项目检测");
       this.assert(detected.framework === "react", "React 框架检测");
-      
+
       console.log(`✅ 检测结果: ${detected.language} + ${detected.framework}`);
     } finally {
       process.chdir(originalCwd);
@@ -127,7 +131,7 @@ export default App;`
 
   async testConfigGeneration() {
     console.log("\n📝 测试配置文件生成...");
-    
+
     const originalCwd = process.cwd();
     process.chdir(this.testDir);
 
@@ -139,13 +143,22 @@ export default App;`
       const configs = await generator.generateConfigs({
         projectType: "typescript",
         preset: "standard",
-        framework: "react"
+        framework: "react",
       });
 
       this.assert(configs.length > 0, "配置文件生成数量");
-      this.assert(fs.existsSync(path.join(this.testDir, ".eslintrc.js")), "ESLint 配置文件存在");
-      this.assert(fs.existsSync(path.join(this.testDir, ".prettierrc.js")), "Prettier 配置文件存在");
-      this.assert(fs.existsSync(path.join(this.testDir, ".vscode/settings.json")), "VSCode 配置文件存在");
+      this.assert(
+        fs.existsSync(path.join(this.testDir, ".eslintrc.js")),
+        "ESLint 配置文件存在"
+      );
+      this.assert(
+        fs.existsSync(path.join(this.testDir, ".prettierrc.js")),
+        "Prettier 配置文件存在"
+      );
+      this.assert(
+        fs.existsSync(path.join(this.testDir, ".vscode/settings.json")),
+        "VSCode 配置文件存在"
+      );
 
       console.log(`✅ 生成了 ${configs.length} 个配置文件`);
     } finally {
@@ -155,7 +168,7 @@ export default App;`
 
   async testDependencyInstallation() {
     console.log("\n📦 测试依赖管理功能...");
-    
+
     const originalCwd = process.cwd();
     process.chdir(this.testDir);
 
@@ -164,11 +177,13 @@ export default App;`
       const packageManager = new PackageManager();
 
       this.assert(packageManager.manager === "npm", "包管理器检测");
-      
+
       // 测试脚本添加
       await packageManager.addScripts();
-      
-      const packageJson = fs.readJsonSync(path.join(this.testDir, "package.json"));
+
+      const packageJson = fs.readJsonSync(
+        path.join(this.testDir, "package.json")
+      );
       this.assert(packageJson.scripts.lint !== undefined, "lint 脚本添加");
       this.assert(packageJson.scripts.format !== undefined, "format 脚本添加");
 
@@ -180,14 +195,17 @@ export default App;`
 
   async testScriptGeneration() {
     console.log("\n⚙️  测试脚本生成功能...");
-    
+
     const packageJsonPath = path.join(this.testDir, "package.json");
     const packageJson = fs.readJsonSync(packageJsonPath);
-    
+
     const expectedScripts = ["lint", "lint:fix", "format", "format:check"];
-    
+
     for (const script of expectedScripts) {
-      this.assert(packageJson.scripts[script] !== undefined, `${script} 脚本存在`);
+      this.assert(
+        packageJson.scripts[script] !== undefined,
+        `${script} 脚本存在`
+      );
     }
 
     console.log("✅ 所有必要脚本已生成");
@@ -195,11 +213,11 @@ export default App;`
 
   async cleanup() {
     console.log("\n🧹 清理测试环境...");
-    
+
     if (fs.existsSync(this.testDir)) {
       fs.removeSync(this.testDir);
     }
-    
+
     console.log("✅ 清理完成");
   }
 

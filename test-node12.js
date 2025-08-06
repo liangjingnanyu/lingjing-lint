@@ -19,8 +19,10 @@ class Node12TestRunner {
       await this.testBasicFunctionality();
       await this.cleanup();
 
-      console.log("\n📊 测试结果: " + this.passed + " 通过, " + this.failed + " 失败");
-      
+      console.log(
+        "\n📊 测试结果: " + this.passed + " 通过, " + this.failed + " 失败"
+      );
+
       if (this.failed === 0) {
         console.log("🎉 Node 12 兼容版测试通过！");
       } else {
@@ -35,7 +37,7 @@ class Node12TestRunner {
 
   async setupTestProject() {
     console.log("🏗️  设置测试项目...");
-    
+
     // 清理并创建测试目录
     if (fs.existsSync(this.testDir)) {
       fs.removeSync(this.testDir);
@@ -48,46 +50,50 @@ class Node12TestRunner {
       version: "1.0.0",
       dependencies: {
         react: "^18.0.0",
-        "react-dom": "^18.0.0"
+        "react-dom": "^18.0.0",
       },
       devDependencies: {
         typescript: "^4.9.0",
-        "@types/react": "^18.0.0"
-      }
+        "@types/react": "^18.0.0",
+      },
     };
 
-    fs.writeJsonSync(path.join(this.testDir, "package.json"), packageJson, { spaces: 2 });
-    
+    fs.writeJsonSync(path.join(this.testDir, "package.json"), packageJson, {
+      spaces: 2,
+    });
+
     this.assert(fs.existsSync(this.testDir), "测试项目目录创建");
     console.log("✅ 测试项目设置完成");
   }
 
   async testBasicFunctionality() {
     console.log("\n🔍 测试基础功能...");
-    
+
     // 导入工具类
     const originalCwd = process.cwd();
     process.chdir(this.testDir);
 
     try {
       const { Utils } = require("./enhanced-cli-node12");
-      
+
       // 测试 Node 版本检测
       const nodeVersion = Utils.getNodeMajorVersion();
       this.assert(typeof nodeVersion === "number", "Node 版本检测");
-      
+
       // 测试项目类型检测
       const detected = Utils.detectProjectType();
       this.assert(detected.language === "typescript", "TypeScript 项目检测");
       this.assert(detected.framework === "react", "React 框架检测");
-      
-      console.log("✅ 检测结果: " + detected.language + " + " + detected.framework);
-      
+
+      console.log(
+        "✅ 检测结果: " + detected.language + " + " + detected.framework
+      );
+
       // 测试包管理器检测
       const { PackageManager } = require("./enhanced-cli-node12");
       const packageManager = new PackageManager();
       this.assert(packageManager.manager === "npm", "包管理器检测");
-      
+
       console.log("✅ 基础功能测试通过");
     } finally {
       process.chdir(originalCwd);
@@ -96,11 +102,11 @@ class Node12TestRunner {
 
   async cleanup() {
     console.log("\n🧹 清理测试环境...");
-    
+
     if (fs.existsSync(this.testDir)) {
       fs.removeSync(this.testDir);
     }
-    
+
     console.log("✅ 清理完成");
   }
 

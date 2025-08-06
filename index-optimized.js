@@ -10,7 +10,7 @@ const CONFIG = {
   REGISTRY_URL: "https://registry.npmjs.org/",
   DEPENDENCIES_TO_REMOVE: [
     "eslint",
-    "prettier", 
+    "prettier",
     "eslint-config-prettier",
     "eslint-plugin-prettier",
     "eslint-plugin-react",
@@ -21,8 +21,8 @@ const CONFIG = {
   TEMPLATES: {
     typescript: "ts-eslint.js",
     javascript: "eslint.js",
-    prettier: "prettier.js"
-  }
+    prettier: "prettier.js",
+  },
 };
 
 // 工具函数
@@ -34,9 +34,11 @@ class Utils {
   }
 
   static async getUserInput(prompt, defaultValue = "") {
-    process.stdout.write(`${prompt}${defaultValue ? ` (默认: ${defaultValue})` : ""}: `);
+    process.stdout.write(
+      `${prompt}${defaultValue ? ` (默认: ${defaultValue})` : ""}: `
+    );
     process.stdin.setEncoding("utf8");
-    
+
     return new Promise((resolve) => {
       process.stdin.once("data", (data) => {
         const input = data.trim();
@@ -48,17 +50,24 @@ class Utils {
   static detectProjectType() {
     const cwd = process.cwd();
     const packageJsonPath = path.join(cwd, "package.json");
-    
+
     if (fs.existsSync(packageJsonPath)) {
       try {
         const packageJson = fs.readJsonSync(packageJsonPath);
-        const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
-        
+        const deps = {
+          ...packageJson.dependencies,
+          ...packageJson.devDependencies,
+        };
+
         // 检测 TypeScript
-        if (deps.typescript || deps["@types/node"] || fs.existsSync(path.join(cwd, "tsconfig.json"))) {
+        if (
+          deps.typescript ||
+          deps["@types/node"] ||
+          fs.existsSync(path.join(cwd, "tsconfig.json"))
+        ) {
           return "typescript";
         }
-        
+
         // 检测 React
         if (deps.react || deps["@types/react"]) {
           return "react";
@@ -67,28 +76,35 @@ class Utils {
         console.warn("⚠️ 无法读取 package.json，将使用默认配置");
       }
     }
-    
+
     // 检测 TypeScript 文件
-    if (fs.existsSync(path.join(cwd, "src")) || fs.existsSync(path.join(cwd, "lib"))) {
+    if (
+      fs.existsSync(path.join(cwd, "src")) ||
+      fs.existsSync(path.join(cwd, "lib"))
+    ) {
       const srcDir = fs.existsSync(path.join(cwd, "src")) ? "src" : "lib";
       const files = fs.readdirSync(path.join(cwd, srcDir));
-      if (files.some(file => file.endsWith(".ts") || file.endsWith(".tsx"))) {
+      if (files.some((file) => file.endsWith(".ts") || file.endsWith(".tsx"))) {
         return "typescript";
       }
     }
-    
+
     return "javascript";
   }
 
   static async execCommand(command, options = {}) {
     return new Promise((resolve, reject) => {
-      child_process.exec(command, { stdio: "inherit", ...options }, (error, stdout, stderr) => {
-        if (error) {
-          reject({ error, stdout, stderr });
-        } else {
-          resolve({ stdout, stderr });
+      child_process.exec(
+        command,
+        { stdio: "inherit", ...options },
+        (error, stdout, stderr) => {
+          if (error) {
+            reject({ error, stdout, stderr });
+          } else {
+            resolve({ stdout, stderr });
+          }
         }
-      });
+      );
     });
   }
 }
@@ -107,7 +123,9 @@ class ProgressManager {
   nextStep(message) {
     this.currentStep++;
     const progress = Math.round((this.currentStep / this.steps.length) * 100);
-    console.log(`\n[${this.currentStep}/${this.steps.length}] (${progress}%) ${message}`);
+    console.log(
+      `\n[${this.currentStep}/${this.steps.length}] (${progress}%) ${message}`
+    );
   }
 
   complete() {
@@ -123,17 +141,17 @@ class PackageManager {
 
   detectPackageManager() {
     const cwd = process.cwd();
-    
+
     // 检测 yarn.lock
     if (fs.existsSync(path.join(cwd, "yarn.lock"))) {
       return "yarn";
     }
-    
+
     // 检测 pnpm-lock.yaml
     if (fs.existsSync(path.join(cwd, "pnpm-lock.yaml"))) {
       return "pnpm";
     }
-    
+
     // 默认使用 npm
     return "npm";
   }
@@ -161,8 +179,10 @@ class PackageManager {
 
   async installDependencies(deps, isDev = true) {
     const devFlag = isDev ? this.getDevFlag() : "";
-    const command = `${this.manager} ${this.getInstallCommand()} ${deps.join(" ")} ${devFlag}`;
-    
+    const command = `${this.manager} ${this.getInstallCommand()} ${deps.join(
+      " "
+    )} ${devFlag}`;
+
     try {
       await Utils.execCommand(command);
       return true;
@@ -188,7 +208,7 @@ class PackageManager {
 
   async removeDependencies(deps) {
     const command = `${this.manager} remove ${deps.join(" ")}`;
-    
+
     try {
       await Utils.execCommand(command);
       console.log("✅ 旧依赖已移除");
@@ -206,41 +226,43 @@ class ConfigGenerator {
 
   async generateConfigs(projectType, options = {}) {
     const configs = [];
-    
+
     // 生成 ESLint 配置
-    const eslintTemplate = projectType === "typescript" ? 
-      CONFIG.TEMPLATES.typescript : CONFIG.TEMPLATES.javascript;
-    
+    const eslintTemplate =
+      projectType === "typescript"
+        ? CONFIG.TEMPLATES.typescript
+        : CONFIG.TEMPLATES.javascript;
+
     await this.copyTemplate(eslintTemplate, ".eslintrc.js");
     configs.push(".eslintrc.js");
-    
+
     // 生成 Prettier 配置
     if (options.includePrettier !== false) {
       await this.copyTemplate(CONFIG.TEMPLATES.prettier, ".prettierrc.js");
       configs.push(".prettierrc.js");
     }
-    
+
     // 生成 .eslintignore
     await this.generateEslintIgnore();
     configs.push(".eslintignore");
-    
+
     // 生成 .prettierignore
     if (options.includePrettier !== false) {
       await this.generatePrettierIgnore();
       configs.push(".prettierignore");
     }
-    
+
     return configs;
   }
 
   async copyTemplate(templateName, destName) {
     const source = path.join(this.templateDir, templateName);
     const dest = path.join(process.cwd(), destName);
-    
+
     if (!fs.existsSync(source)) {
       throw new Error(`模板文件不存在: ${source}`);
     }
-    
+
     fs.copySync(source, dest);
     console.log(`✅ 已生成 ${destName} 配置文件`);
   }
@@ -252,9 +274,9 @@ class ConfigGenerator {
       "build/",
       "coverage/",
       "*.min.js",
-      "*.bundle.js"
+      "*.bundle.js",
     ].join("\n");
-    
+
     const dest = path.join(process.cwd(), ".eslintignore");
     fs.writeFileSync(dest, ignoreContent);
     console.log("✅ 已生成 .eslintignore 文件");
@@ -269,9 +291,9 @@ class ConfigGenerator {
       "*.min.js",
       "*.bundle.js",
       "package-lock.json",
-      "yarn.lock"
+      "yarn.lock",
     ].join("\n");
-    
+
     const dest = path.join(process.cwd(), ".prettierignore");
     fs.writeFileSync(dest, ignoreContent);
     console.log("✅ 已生成 .prettierignore 文件");
@@ -286,7 +308,9 @@ async function main() {
   // 检查 Node 版本
   const nodeVersion = Utils.getNodeMajorVersion();
   if (nodeVersion < CONFIG.SUPPORTED_NODE_VERSION) {
-    console.warn(`⚠️ 建议使用 Node.js ${CONFIG.SUPPORTED_NODE_VERSION}+ 版本以获得最佳体验`);
+    console.warn(
+      `⚠️ 建议使用 Node.js ${CONFIG.SUPPORTED_NODE_VERSION}+ 版本以获得最佳体验`
+    );
     console.warn(`当前版本: ${process.version}`);
   }
 
@@ -295,10 +319,10 @@ async function main() {
   progress.addSteps([
     "检测项目配置",
     "设置包管理器",
-    "清理旧依赖", 
+    "清理旧依赖",
     "安装新依赖",
     "生成配置文件",
-    "验证配置"
+    "验证配置",
   ]);
 
   try {
@@ -306,17 +330,23 @@ async function main() {
     progress.nextStep("检测项目类型和包管理器...");
     const projectType = Utils.detectProjectType();
     const packageManager = new PackageManager();
-    
+
     console.log(`📦 检测到包管理器: ${packageManager.manager}`);
-    console.log(`🎯 检测到项目类型: ${projectType === "typescript" ? "TypeScript" : "JavaScript"}`);
+    console.log(
+      `🎯 检测到项目类型: ${
+        projectType === "typescript" ? "TypeScript" : "JavaScript"
+      }`
+    );
 
     // 询问用户确认
     const confirmType = await Utils.getUserInput(
-      `确认项目类型 (typescript/javascript)`, 
+      `确认项目类型 (typescript/javascript)`,
       projectType
     );
-    
-    const finalProjectType = confirmType.toLowerCase().startsWith("t") ? "typescript" : "javascript";
+
+    const finalProjectType = confirmType.toLowerCase().startsWith("t")
+      ? "typescript"
+      : "javascript";
 
     // 步骤 2: 设置包管理器
     progress.nextStep("配置包管理器和源...");
@@ -329,8 +359,10 @@ async function main() {
     // 步骤 4: 安装新依赖
     progress.nextStep("安装新的 lint 和 prettier 依赖...");
     const dependencies = getDependenciesByType(finalProjectType);
-    const installSuccess = await packageManager.installDependencies(dependencies);
-    
+    const installSuccess = await packageManager.installDependencies(
+      dependencies
+    );
+
     if (!installSuccess) {
       throw new Error("依赖安装失败");
     }
@@ -340,8 +372,10 @@ async function main() {
     progress.nextStep("生成配置文件...");
     const templateDir = path.join(__dirname, "templates");
     const configGenerator = new ConfigGenerator(templateDir);
-    
-    const generatedConfigs = await configGenerator.generateConfigs(finalProjectType);
+
+    const generatedConfigs = await configGenerator.generateConfigs(
+      finalProjectType
+    );
     console.log(`✅ 已生成 ${generatedConfigs.length} 个配置文件`);
 
     // 步骤 6: 验证配置
@@ -350,9 +384,12 @@ async function main() {
 
     // 完成
     progress.complete();
-    
+
     // 询问是否运行格式化
-    const runFormat = await Utils.getUserInput("是否立即运行代码格式化？(y/N)", "n");
+    const runFormat = await Utils.getUserInput(
+      "是否立即运行代码格式化？(y/N)",
+      "n"
+    );
     if (runFormat.toLowerCase().startsWith("y")) {
       console.log("\n🎨 正在格式化代码...");
       await runCodeFormat(packageManager);
@@ -362,7 +399,6 @@ async function main() {
     console.log("   • 运行 'npm run lint' 或 'yarn lint' 检查代码");
     console.log("   • 运行 'npm run format' 或 'yarn format' 格式化代码");
     console.log("   • 在 IDE 中安装 ESLint 和 Prettier 插件以获得实时提示");
-
   } catch (error) {
     console.error("\n❌ 配置过程中出现错误:");
     console.error(error.message);
@@ -379,10 +415,10 @@ function getDependenciesByType(projectType) {
   const baseDeps = [
     "eslint",
     "prettier",
-    "eslint-config-prettier", 
+    "eslint-config-prettier",
     "eslint-plugin-prettier",
     "eslint-plugin-react",
-    "eslint-plugin-react-hooks"
+    "eslint-plugin-react-hooks",
   ];
 
   if (projectType === "typescript") {
@@ -402,7 +438,7 @@ async function validateConfigs(configs) {
     if (!fs.existsSync(filePath)) {
       throw new Error(`配置文件生成失败: ${config}`);
     }
-    
+
     // 验证 JavaScript 配置文件语法
     if (config.endsWith(".js")) {
       try {
