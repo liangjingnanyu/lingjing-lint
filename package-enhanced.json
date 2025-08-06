@@ -2,27 +2,26 @@
   "name": "liangjing-lint-start",
   "version": "2.0.0",
   "description": "增强版 React/TypeScript 项目 lint 和 prettier 配置工具 - 支持智能检测、多框架、配置预设",
-  "main": "index-smart.js",
+  "main": "enhanced-cli.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/liangjingnanyu/lingjing-lint"
   },
   "bin": {
-    "liangjing-lint-start": "index-smart.js",
-    "liangjing-lint": "index-smart.js"
+    "liangjing-lint-start": "enhanced-cli.js",
+    "liangjing-lint": "enhanced-cli.js"
   },
   "scripts": {
     "test": "node test-enhanced.js",
-    "test:node12": "node test-node12.js",
-    "start": "node index-smart.js",
+    "test:original": "node index.js --test",
     "dev": "node enhanced-cli.js",
-    "dev:node12": "node enhanced-cli-node12.js",
-    "legacy": "node index.js",
-    "build": "echo '构建完成'"
+    "build": "echo '构建完成'",
+    "lint": "eslint . --ext .js --fix",
+    "format": "prettier --write \"**/*.{js,json,md}\""
   },
   "keywords": [
     "lint",
-    "prettier",
+    "prettier", 
     "react",
     "typescript",
     "eslint",
@@ -31,28 +30,33 @@
     "vite",
     "配置工具",
     "代码规范",
+    "自动化",
     "智能检测"
   ],
   "author": "liangjing <houqiang0219@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "fs-extra": "^11.1.1",
-    "inquirer": "^9.2.7"
+    "inquirer": "^9.2.7",
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.45.0",
+    "prettier": "^3.0.0"
   },
   "engines": {
-    "node": ">=12.0.0"
+    "node": ">=16.0.0"
   },
   "files": [
-    "index-smart.js",
     "enhanced-cli.js",
-    "enhanced-cli-node12.js",
     "index.js",
     "templates/",
     "config/",
     "README.md",
     "LICENSE"
   ],
-  "files.associations": {
-    "*.js": "javascript"
+  "preferGlobal": true,
+  "publishConfig": {
+    "access": "public"
   }
 }

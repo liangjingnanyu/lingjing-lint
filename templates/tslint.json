@@ -1,0 +1,87 @@
+{
+  "extends": [
+    "tslint:recommended",
+    "tslint-react",
+    "tslint-config-prettier"
+  ],
+  "linterOptions": {
+    "exclude": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**"
+    ]
+  },
+  "rules": {
+    "quotemark": [true, "single", "jsx-double"],
+    "semicolon": [true, "always"],
+    "trailing-comma": [
+      true,
+      {
+        "multiline": "always",
+        "singleline": "never"
+      }
+    ],
+    "no-console": {
+      "severity": "warning"
+    },
+    "no-debugger": true,
+    "no-unused-variable": true,
+    "no-var-requires": false,
+    "object-literal-sort-keys": false,
+    "ordered-imports": [
+      true,
+      {
+        "import-sources-order": "case-insensitive",
+        "named-imports-order": "case-insensitive"
+      }
+    ],
+    "interface-name": false,
+    "jsx-no-lambda": false,
+    "jsx-no-multiline-js": false,
+    "member-access": [true, "no-public"],
+    "member-ordering": [
+      true,
+      {
+        "order": [
+          "static-field",
+          "instance-field",
+          "static-method",
+          "instance-method"
+        ]
+      }
+    ],
+    "variable-name": [
+      true,
+      "ban-keywords",
+      "check-format",
+      "allow-pascal-case"
+    ],
+    "whitespace": [
+      true,
+      "check-branch",
+      "check-decl",
+      "check-operator",
+      "check-separator",
+      "check-type"
+    ],
+    "typedef-whitespace": [
+      true,
+      {
+        "call-signature": "nospace",
+        "index-signature": "nospace",
+        "parameter": "nospace",
+        "property-declaration": "nospace",
+        "variable-declaration": "nospace"
+      }
+    ],
+    "ban-types": {
+      "Object": "Avoid using the `Object` type. Did you mean `object`?",
+      "Function": "Avoid using the `Function` type. Prefer a specific function type, like `() => void`.",
+      "Boolean": "Avoid using the `Boolean` type. Did you mean `boolean`?",
+      "Number": "Avoid using the `Number` type. Did you mean `number`?",
+      "String": "Avoid using the `String` type. Did you mean `string`?",
+      "Symbol": "Avoid using the `Symbol` type. Did you mean `symbol`?"
+    }
+  }
+}
