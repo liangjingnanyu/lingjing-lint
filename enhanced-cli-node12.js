@@ -654,7 +654,8 @@ function getNode12CompatibleVersion(packageName) {
     "eslint-plugin-react-refresh": "^0.4.3"
   };
   
-  return node12CompatibleVersions[packageName] || packageName;
+  const version = node12CompatibleVersions[packageName];
+  return version ? `${packageName}@${version}` : packageName;
 }
 
 // 根据项目类型和框架获取依赖
